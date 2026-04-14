@@ -1,0 +1,59 @@
+from flask import Flask, render_template, request, redirect, url_for
+import random, time
+
+app = Flask(__name__)
+
+USER_DATA = {
+    "aaditri": "1234"
+}
+
+otp_store = {}
+
+@app.route('/', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+
+        if username in USER_DATA and USER_DATA[username] == password:
+            otp = str(random.randint(100000, 999999))
+            
+            otp_store[username] = {
+                "otp": otp,
+                "time": time.time()
+            }
+
+            print("OTP:", otp)  # for testing
+
+            return redirect(url_for('otp', user=username))
+
+        return "Wrong credentials ❌"
+
+    return render_template('login.html')
+
+
+@app.route('/otp/<user>')
+def otp(user):
+    return render_template('otp.html', user=user)
+
+
+@app.route('/verify', methods=['POST'])
+def verify():
+    user = request.form.get('user')
+    entered_otp = request.form.get('otp')
+
+    if user in otp_store:
+        real_otp = otp_store[user]["otp"]
+        timestamp = otp_store[user]["time"]
+
+        if time.time() - timestamp > 30:
+            return "OTP Expired ❌"
+
+        if entered_otp == real_otp:
+            return render_template('success.html')
+
+    return "Invalid OTP ❌"
+
+
+if __name__ == '__main__':
+    app.run(debug=True)
